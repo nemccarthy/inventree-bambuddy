@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "inventree-bambuddy"
+description = "Queue 3D prints in Bambuddy from InvenTree"
+dynamic = ["version"]
+authors = [
+    { name = "EdgeMachines" },
+]
+readme = "README.md"
+license = "MIT"
+keywords = ["inventree", "plugin", "bambuddy", "bambu", "3d-printing"]
+requires-python = ">=3.9"
+dependencies = ["requests"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Framework :: InvenTree",
+]
+
+[project.urls]
+Homepage = "https://github.com/nemccarthy/inventree-bambuddy"
+Repository = "https://github.com/nemccarthy/inventree-bambuddy"
+Issues = "https://github.com/nemccarthy/inventree-bambuddy/issues"
+Changelog = "https://github.com/nemccarthy/inventree-bambuddy/blob/main/CHANGELOG.md"
+
+[project.entry-points."inventree_plugins"]
+BambuddyPlugin = "inventree_bambuddy.core:BambuddyPlugin"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["inventree_bambuddy*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "inventree_bambuddy.PLUGIN_VERSION"}
