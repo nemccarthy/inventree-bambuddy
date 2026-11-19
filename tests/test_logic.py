@@ -356,3 +356,51 @@ def test_error_detail_is_readable():
         client._describe([{'loc': ['body', 'quantity'], 'msg': 'Input should be an integer'}])
         == 'quantity: Input should be an integer'
     )
+
+
+class FakeResponse:
+    def __init__(self, text, server=''):
+        self.text = text
+        self.headers = {'Server': server} if server else {}
+
+
+def test_snippet_strips_markup():
+    html = '<html><head><style>p {color: red}</style></head><body><h1>400  Bad\nRequest</h1></body></html>'
+
+    assert client.text_snippet(html) == '400 Bad Request'
+    assert client.text_snippet('x' * 500).endswith('...')
+    assert client.text_snippet('') == ''
+
+
+def test_stranger_on_an_https_port():
+    answer = FakeResponse('Client sent an HTTP request to an HTTPS server.')
+    text = client.describe_stranger(answer, 'http://host:8443/api/v1')
+
+    assert 'Client sent an HTTP request to an HTTPS server.' in text
+    assert 'use https://' in text
+
+
+def test_stranger_which_is_inventree():
+    answer = FakeResponse('<h1>Bad Request (400)</h1>', server='gunicorn')
+    text = client.describe_stranger(answer, 'http://localhost:8000/api/v1')
+
+    assert 'Server: gunicorn.' in text
+    assert 'InvenTree itself' in text
+
+
+def test_stranger_which_is_inventree_behind_its_proxy():
+    # http://<hostname>/ without a port: InvenTree's proxy passes it on
+    answer = FakeResponse('<h1>Bad Request (400)</h1>', server='Caddy, gunicorn')
+    text = client.describe_stranger(answer, 'http://myhost/api/v1')
+
+    assert 'InvenTree itself' in text and ':8000' in text
+
+    answer = FakeResponse('<title>Bad Request (400)</title>', server='Caddy')
+    assert 'InvenTree itself' in client.describe_stranger(answer, 'http://myhost/api/v1')
+
+
+def test_stranger_unknown():
+    text = client.describe_stranger(FakeResponse('', server='nginx'), 'http://host:80/api/v1')
+
+    assert 'Server: nginx.' in text
+    assert 'Check the address and port' in text

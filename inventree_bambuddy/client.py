@@ -86,6 +86,65 @@ def _describe(detail) -> str:
     return str(detail)
 
 
+def text_snippet(body: str, limit: int = 140) -> str:
+    """The readable start of a response body: tags and extra spaces removed."""
+    import re
+
+    text = re.sub(r'(?is)<(script|style)\b.*?</\1>', ' ', body or '')
+    text = re.sub(r'<[^>]+>', ' ', text)
+    text = ' '.join(text.split())
+
+    if len(text) > limit:
+        text = text[:limit].rstrip() + '...'
+
+    return text
+
+
+def describe_stranger(response, base: str) -> str:
+    """What answered in place of Bambuddy's API, and the likely way to fix it."""
+    try:
+        body = response.text or ''
+    except Exception:  # pragma: no cover - a body which cannot be decoded
+        body = ''
+
+    snippet = text_snippet(body)
+    server = (response.headers.get('Server') or '').strip()
+
+    parts = []
+
+    if snippet:
+        parts.append(f'It said: "{snippet}"')
+
+    if server:
+        parts.append(f'Server: {server}.')
+
+    lowered = body.lower()
+
+    if base.startswith('http://') and 'https' in lowered and (
+        'http request' in lowered or 'plain http' in lowered
+    ):
+        parts.append('That port expects HTTPS: use https:// in the Bambuddy address.')
+    elif (
+        'inventree' in lowered
+        or 'gunicorn' in server.lower()
+        or 'bad request (400)' in lowered
+    ):
+        # Django's own error page: the request reached InvenTree, directly or
+        # through its proxy on ports 80 and 443
+        parts.append(
+            'This looks like InvenTree itself, not Bambuddy. Give the address with '
+            "Bambuddy's port, usually http://<address of the machine>:8000. Inside the "
+            'InvenTree containers, localhost is the container, not the machine.'
+        )
+    else:
+        parts.append(
+            'Check the address and port in the plugin settings: Bambuddy answers on '
+            'http://<host>:8000 unless it was set up differently.'
+        )
+
+    return ' '.join(parts)
+
+
 class Bambuddy:
     """Client for one Bambuddy server."""
 
@@ -123,9 +182,17 @@ class Bambuddy:
                 f'Bambuddy did not answer within {self.timeout:g} seconds'
             ) from None
         except requests.exceptions.RequestException as exc:
-            raise BambuddyError(
-                f'Could not reach Bambuddy at {self.base}: {type(exc).__name__}'
-            ) from None
+            reason = type(exc).__name__
+
+            if isinstance(exc, requests.exceptions.SSLError):
+                reason = (
+                    'the HTTPS certificate was not accepted (SSLError). If Bambuddy is '
+                    'also reachable without HTTPS on the local network, use that address'
+                )
+            elif isinstance(exc, requests.exceptions.ConnectionError):
+                reason = 'no connection (wrong address or port, or blocked by a firewall)'
+
+            raise BambuddyError(f'Could not reach Bambuddy at {self.base}: {reason}') from None
 
         if response.status_code >= 400:
             detail = None
@@ -145,7 +212,12 @@ class Bambuddy:
             elif detail:
                 message = _describe(detail)
             else:
-                message = f'Bambuddy answered with error {response.status_code}'
+                # Bambuddy gives a reason with its errors. Without one, something
+                # else answered: say what, so that the address can be put right.
+                message = (
+                    f'The address {self.base} answered with error {response.status_code}, '
+                    f'but not the way Bambuddy does. {describe_stranger(response, self.base)}'
+                )
 
             raise BambuddyError(message, status=response.status_code, detail=detail)
 
@@ -161,7 +233,8 @@ class Bambuddy:
             return response.json()
         except ValueError:
             raise BambuddyError(
-                'Bambuddy sent an answer which could not be read. Check the server address.'
+                f'The address {self.base} answered, but not with Bambuddy data. '
+                f'{describe_stranger(response, self.base)}'
             ) from None
 
     # Server

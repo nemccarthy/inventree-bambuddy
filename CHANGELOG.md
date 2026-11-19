@@ -3,6 +3,14 @@
 All notable changes to this plugin are recorded here.
 Versions follow [semantic versioning](https://semver.org).
 
+## 0.1.1 - 2026-11-20
+
+- When the Bambuddy address is answered by something other than Bambuddy, the
+  error now says what answered and what to change (HTTPS port, InvenTree
+  itself, wrong port), instead of only the error number
+- Clearer messages when there is no connection or the HTTPS certificate is
+  not accepted
+
 ## 0.1.0 - 2026-11-20
 
 First release. Built and tested against InvenTree 1.7.3 and Bambuddy 1.3.1.

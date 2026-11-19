@@ -379,7 +379,11 @@ export function BambuddyPage({ context }: Readonly<{ context: InvenTreePluginCon
 
       {server && !server.ok && (
         <Alert color='red' title='Bambuddy could not be reached'>
-          {server.error} Print runs cannot be queued or followed until it can.
+          <Text size='sm'>{server.error}</Text>
+          <Text size='sm' mt={4}>
+            Print runs cannot be queued or followed until it can. The address and the API key
+            are in the settings of the Bambuddy plugin.
+          </Text>
         </Alert>
       )}
 
@@ -392,7 +396,10 @@ export function BambuddyPage({ context }: Readonly<{ context: InvenTreePluginCon
 
       {data.queue_error && (
         <Alert color='yellow' title='The Bambuddy queue could not be read'>
-          {data.queue_error}. The runs below show what was last known.
+          <Text size='sm'>{data.queue_error}</Text>
+          <Text size='sm' mt={4}>
+            The runs below show what was last known.
+          </Text>
         </Alert>
       )}
 

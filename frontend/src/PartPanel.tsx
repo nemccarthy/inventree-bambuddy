@@ -246,7 +246,10 @@ export function BambuddyPartPanel({
       {error && <Alert color='red'>{error}</Alert>}
       {data.queue_error && (
         <Alert color='yellow' title='The Bambuddy queue could not be read'>
-          {data.queue_error}. The runs below show what was last known.
+          <Text size='sm'>{data.queue_error}</Text>
+          <Text size='sm' mt={4}>
+            The runs below show what was last known.
+          </Text>
         </Alert>
       )}
 
