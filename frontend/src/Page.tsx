@@ -69,10 +69,16 @@ function PartPicker({
 
   const [search, setSearch] = useState('');
   const [rows, setRows] = useState<any[]>([]);
-  const [value, setValue] = useState<string | null>(null);
+  // The chosen part is kept on its own: choosing puts its name in the search
+  // box, and the list which that search brings back need not contain it
+  const [picked, setPicked] = useState<any | null>(null);
+
+  // InvenTree's full name already carries the IPN
+  const labelOf = (row: any): string => String(row.full_name ?? row.name);
+  const pickedLabel = picked ? labelOf(picked) : null;
 
   useEffect(() => {
-    if (!opened) {
+    if (!opened || search === pickedLabel) {
       return;
     }
 
@@ -97,33 +103,37 @@ function PartPicker({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [opened, search]);
+  }, [opened, search, pickedLabel]);
 
   useEffect(() => {
     if (opened) {
-      setValue(null);
+      setPicked(null);
       setSearch('');
     }
   }, [opened]);
 
-  const pick = () => {
-    const row = rows.find((entry) => String(entry.pk) === value);
+  const options = rows.map((row) => ({ value: String(row.pk), label: labelOf(row) }));
 
-    if (!row) {
+  if (picked && !rows.some((row) => row.pk === picked.pk)) {
+    options.unshift({ value: String(picked.pk), label: labelOf(picked) });
+  }
+
+  const pick = () => {
+    if (!picked) {
       return;
     }
 
     onPicked({
-      pk: row.pk,
-      name: row.name,
-      ipn: row.IPN ?? '',
-      description: row.description ?? '',
-      units: row.units ?? '',
-      active: row.active,
-      assembly: row.assembly,
-      trackable: row.trackable,
-      minimum_stock: Number(row.minimum_stock ?? 0),
-      default_location: row.default_location ?? null
+      pk: picked.pk,
+      name: picked.name,
+      ipn: picked.IPN ?? '',
+      description: picked.description ?? '',
+      units: picked.units ?? '',
+      active: picked.active,
+      assembly: picked.assembly,
+      trackable: picked.trackable,
+      minimum_stock: Number(picked.minimum_stock ?? 0),
+      default_location: picked.default_location ?? null
     });
   };
 
@@ -133,12 +143,11 @@ function PartPicker({
         <Select
           label='Part'
           placeholder='Search by name or IPN'
-          data={rows.map((row) => ({
-            value: String(row.pk),
-            label: row.IPN ? `${row.IPN} · ${row.full_name ?? row.name}` : (row.full_name ?? row.name)
-          }))}
-          value={value}
-          onChange={setValue}
+          data={options}
+          value={picked ? String(picked.pk) : null}
+          onChange={(next) =>
+            setPicked(rows.find((row) => String(row.pk) === next) ?? (next ? picked : null))
+          }
           searchable
           onSearchChange={setSearch}
           filter={({ options }) => options}
@@ -150,7 +159,7 @@ function PartPicker({
           <Button variant='default' onClick={onClose}>
             Cancel
           </Button>
-          <Button disabled={value === null} onClick={pick}>
+          <Button disabled={picked === null} onClick={pick}>
             Choose the file
           </Button>
         </Group>

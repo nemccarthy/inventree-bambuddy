@@ -3,6 +3,13 @@
 All notable changes to this plugin are recorded here.
 Versions follow [semantic versioning](https://semver.org).
 
+## 0.1.2 - 2026-11-20
+
+- Fixed: on the 3D Prints page, "Link a part" did nothing after choosing a
+  part which has an IPN. Choosing put the part's name in the search box, the
+  search which followed found nothing, and the chosen part was lost
+- The part list in that dialog no longer shows the IPN twice
+
 ## 0.1.1 - 2026-11-20
 
 - When the Bambuddy address is answered by something other than Bambuddy, the
